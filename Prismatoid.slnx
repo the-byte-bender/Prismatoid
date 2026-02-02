@@ -1,0 +1,4 @@
+<Solution>
+    <Project Path="Prismatoid/Prismatoid.csproj" />
+    <Project Path="Prismatoid.Demo/Prismatoid.Demo.csproj" />
+</Solution>
