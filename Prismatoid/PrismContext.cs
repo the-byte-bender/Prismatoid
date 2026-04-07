@@ -46,13 +46,6 @@ public sealed unsafe class PrismContext : IDisposable
                     var priority = Methods.prism_registry_priority(_handle, id);
                     var isSupported = Methods.prism_registry_exists(_handle, id);
 
-                    // We briefly acquire/create if needed to get features, but let's see if there's a better way.
-                    // Usually, we'd need a backend instance to call get_features.
-                    // If we can't get features without acquiring, we might return default(PrismBackendFeature) or similar.
-                    // For now, let's assume we might need to acquire it briefly if we really need features here,
-                    // or maybe there's a registry_features call? The user didn't specify one.
-                    // I'll stick to 0 for now or try to see if I can get it from an acquired backend.
-
                     var backendPtr = Methods.prism_registry_get(_handle, id);
                     var features =
                         backendPtr != null
