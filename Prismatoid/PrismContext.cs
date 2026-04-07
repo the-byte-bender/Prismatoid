@@ -46,13 +46,7 @@ public sealed unsafe class PrismContext : IDisposable
                     var priority = Methods.prism_registry_priority(_handle, id);
                     var isSupported = Methods.prism_registry_exists(_handle, id);
 
-                    var backendPtr = Methods.prism_registry_get(_handle, id);
-                    var features =
-                        backendPtr != null
-                            ? (PrismBackendFeature)Methods.prism_backend_get_features(backendPtr)
-                            : 0;
-
-                    backends.Add(new PrismBackendInfo(id, name, priority, isSupported, features));
+                    backends.Add(new PrismBackendInfo(id, name, priority, isSupported));
                 }
                 return backends;
             }

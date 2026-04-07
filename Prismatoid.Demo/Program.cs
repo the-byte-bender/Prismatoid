@@ -6,21 +6,8 @@ Console.WriteLine("Available Backends:");
 foreach (var info in context.AvailableBackends)
 {
     Console.WriteLine(
-        $"[{info.Id:X16}] {info.Name, -15} | Priority: {info.Priority} | Supported: {info.IsSupported}"
+        $"[{info.Id:X16}] {info.Name,-15} | Priority: {info.Priority} | Supported: {info.IsSupported}"
     );
-
-    var features = info.Features;
-    if (features != 0)
-    {
-        var supportedList = Enum.GetValues<PrismBackendFeature>()
-            .Where(f => features.HasFlag(f))
-            .Select(f => f.ToString());
-        Console.WriteLine($"  Features: {string.Join(", ", supportedList)}");
-    }
-    else
-    {
-        Console.WriteLine("  Features: None");
-    }
 }
 
 using var backend = context.AcquireBestBackend();
