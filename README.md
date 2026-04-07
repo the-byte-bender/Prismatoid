@@ -35,9 +35,12 @@ if (englishVoice != default)
     backend.CurrentVoice = englishVoice;
 }
 
-// Adjust speech parameters (volume/rate/pitch are null if not supported by driver)
-if (backend.Rate.HasValue) backend.Rate = 0.75f;
-if (backend.Volume.HasValue) backend.Volume = 1.0f;
+// Adjust speech parameters
+if ((backend.Features & PrismBackendFeature.SupportsSetRate) != 0)
+    backend.Rate = 0.75f;
+
+if ((backend.Features & PrismBackendFeature.SupportsSetVolume) != 0)
+    backend.Volume = 1.0f;
 ```
 
 ## Audio Synthesis

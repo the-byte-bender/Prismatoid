@@ -14,22 +14,10 @@ public sealed unsafe class PrismContext : IDisposable
     /// <summary>
     /// Initializes a new instance of the <see cref="PrismContext"/> class.
     /// </summary>
-    /// <param name="platformHandle">Optional handle for backends that require it (HWND on Windows, JNIEnv* on Android).</param>
-    public PrismContext(IntPtr platformHandle = default)
+    public PrismContext()
     {
-        if (platformHandle != IntPtr.Zero)
-        {
-            var config = new PrismConfig
-            {
-                version = 1,
-                platformPointer = platformHandle
-            };
-            _handle = Methods.prism_init(&config);
-        }
-        else
-        {
-            _handle = Methods.prism_init(null);
-        }
+        var config = new PrismConfig { version = 2 };
+        _handle = Methods.prism_init(&config);
 
         if (_handle is null)
         {
@@ -46,7 +34,8 @@ public sealed unsafe class PrismContext : IDisposable
         {
             lock (_lock)
             {
-                if (_handle is null) return [];
+                if (_handle is null)
+                    return [];
                 var count = Methods.prism_registry_count(_handle);
                 var backends = new List<PrismBackendInfo>((int)count);
                 for (nuint i = 0; i < count; i++)
@@ -57,7 +46,20 @@ public sealed unsafe class PrismContext : IDisposable
                     var priority = Methods.prism_registry_priority(_handle, id);
                     var isSupported = Methods.prism_registry_exists(_handle, id);
 
-                    backends.Add(new PrismBackendInfo(id, name, priority, isSupported));
+                    // We briefly acquire/create if needed to get features, but let's see if there's a better way.
+                    // Usually, we'd need a backend instance to call get_features.
+                    // If we can't get features without acquiring, we might return default(PrismBackendFeature) or similar.
+                    // For now, let's assume we might need to acquire it briefly if we really need features here,
+                    // or maybe there's a registry_features call? The user didn't specify one.
+                    // I'll stick to 0 for now or try to see if I can get it from an acquired backend.
+
+                    var backendPtr = Methods.prism_registry_get(_handle, id);
+                    var features =
+                        backendPtr != null
+                            ? (PrismBackendFeature)Methods.prism_backend_get_features(backendPtr)
+                            : 0;
+
+                    backends.Add(new PrismBackendInfo(id, name, priority, isSupported, features));
                 }
                 return backends;
             }
@@ -69,8 +71,8 @@ public sealed unsafe class PrismContext : IDisposable
     /// </summary>
     /// <returns>An initialized backend instance.</returns>
     /// <remarks>
-    /// This method uses the internal Prism registry cache. Multiple calls to this method (or <see cref="AcquireBackend"/>) 
-    /// for the same backend ID will return wrappers pointing to the same native resource. 
+    /// This method uses the internal Prism registry cache. Multiple calls to this method (or <see cref="AcquireBackend"/>)
+    /// for the same backend ID will return wrappers pointing to the same native resource.
     /// </remarks>
     /// <exception cref="PrismException">Thrown if no backends are available.</exception>
     public IPrismBackend AcquireBestBackend()
@@ -91,7 +93,7 @@ public sealed unsafe class PrismContext : IDisposable
     /// </summary>
     /// <returns>A new initialized backend instance.</returns>
     /// <remarks>
-    /// Unlike <see cref="AcquireBestBackend"/>, this creates a unique native instance. 
+    /// Unlike <see cref="AcquireBestBackend"/>, this creates a unique native instance.
     /// </remarks>
     public IPrismBackend CreateBestBackend()
     {
@@ -119,7 +121,7 @@ public sealed unsafe class PrismContext : IDisposable
     /// <param name="backendId">The ID of the backend to acquire.</param>
     /// <returns>A backend instance (either existing or newly created).</returns>
     /// <remarks>
-    /// This method uses the internal Prism registry cache. Multiple calls for the same ID will return wrappers 
+    /// This method uses the internal Prism registry cache. Multiple calls for the same ID will return wrappers
     /// sharing the same native instance.
     /// </remarks>
     /// <exception cref="PrismException">Thrown if the specified backend is not available.</exception>
@@ -142,7 +144,7 @@ public sealed unsafe class PrismContext : IDisposable
     /// <param name="backendId">The ID of the backend to create.</param>
     /// <returns>A new initialized backend instance.</returns>
     /// <remarks>
-    /// Each call creates a unique native instance with its own state. 
+    /// Each call creates a unique native instance with its own state.
     /// Use this if you need independent voice/rate/pitch state from the rest of the application.
     /// </remarks>
     public IPrismBackend CreateBackend(ulong backendId)

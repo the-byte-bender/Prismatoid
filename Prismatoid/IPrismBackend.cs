@@ -11,19 +11,27 @@ public interface IPrismBackend : IDisposable
     string Name { get; }
 
     /// <summary>
-    /// Gets or sets the speech volume. Returns null if not supported.
+    /// Gets the features supported by this backend.
     /// </summary>
-    float? Volume { get; set; }
+    PrismBackendFeature Features { get; }
 
     /// <summary>
-    /// Gets or sets the speech rate. Returns null if not supported.
+    /// Gets or sets the speech volume.
     /// </summary>
-    float? Rate { get; set; }
+    /// <exception cref="PrismException">Thrown if not supported.</exception>
+    float Volume { get; set; }
 
     /// <summary>
-    /// Gets or sets the voice pitch. Returns null if not supported.
+    /// Gets or sets the speech rate.
     /// </summary>
-    float? Pitch { get; set; }
+    /// <exception cref="PrismException">Thrown if not supported.</exception>
+    float Rate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the voice pitch.
+    /// </summary>
+    /// <exception cref="PrismException">Thrown if not supported.</exception>
+    float Pitch { get; set; }
 
     /// <summary>
     /// Gets whether the backend is currently speaking.
@@ -31,7 +39,7 @@ public interface IPrismBackend : IDisposable
     bool IsSpeaking { get; }
 
     /// <summary>
-    /// Gets an enumerable of available voices for this backend. 
+    /// Gets an enumerable of available voices for this backend.
     /// </summary>
     IEnumerable<PrismVoice> Voices { get; }
 
@@ -68,7 +76,7 @@ public interface IPrismBackend : IDisposable
     /// The application SHOULD NOT call other methods on this backend while the enumerable is being consumed.
     /// </para>
     /// <para>
-    /// <b>Performance Warning:</b> To minimize allocations, the internal buffers may be pooled. 
+    /// <b>Performance Warning:</b> To minimize allocations, the internal buffers may be pooled.
     /// The data in each <see cref="ReadOnlyMemory{T}"/> is only guaranteed to be valid until the next iteration of the enumerable.
     /// If you need to keep the audio data, you MUST copy it to a private buffer.
     /// </para>

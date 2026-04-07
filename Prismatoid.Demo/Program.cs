@@ -5,16 +5,36 @@ using PrismContext context = new();
 Console.WriteLine("Available Backends:");
 foreach (var info in context.AvailableBackends)
 {
-    Console.WriteLine($"[{info.Id:X16}] {info.Name,-15} | Priority: {info.Priority} | Supported: {info.IsSupported}");
+    Console.WriteLine(
+        $"[{info.Id:X16}] {info.Name, -15} | Priority: {info.Priority} | Supported: {info.IsSupported}"
+    );
 }
 
 using var backend = context.AcquireBestBackend();
 Console.WriteLine($"Active Backend: {backend.Name}");
 
-string vol = backend.Volume?.ToString("P0") ?? "Not Supported";
-string rate = backend.Rate?.ToString("P0") ?? "Not Supported";
-string pitch = backend.Pitch?.ToString("P0") ?? "Not Supported";
-Console.WriteLine($"Volume: {vol}, Rate: {rate}, Pitch: {pitch}");
+Console.WriteLine("Supported Features:");
+foreach (PrismBackendFeature feature in Enum.GetValues<PrismBackendFeature>())
+{
+    if (backend.Features.HasFlag(feature))
+    {
+        Console.WriteLine($" - {feature}");
+    }
+}
+
+string vol =
+    (backend.Features & PrismBackendFeature.SupportsGetVolume) != 0
+        ? backend.Volume.ToString("P0")
+        : "Not Supported";
+string rate =
+    (backend.Features & PrismBackendFeature.SupportsGetRate) != 0
+        ? backend.Rate.ToString("P0")
+        : "Not Supported";
+string pitch =
+    (backend.Features & PrismBackendFeature.SupportsGetPitch) != 0
+        ? backend.Pitch.ToString("P0")
+        : "Not Supported";
+Console.WriteLine($"Current Settings: Volume: {vol}, Rate: {rate}, Pitch: {pitch}");
 
 Console.WriteLine("Available Voices:");
 foreach (var voice in backend.Voices)
@@ -41,7 +61,9 @@ try
         chunkCount++;
         totalSamples += chunk.Length;
     }
-    Console.WriteLine($"Memory Synthesis Complete: Received {chunkCount} chunks, {totalSamples} total samples.");
+    Console.WriteLine(
+        $"Memory Synthesis Complete: Received {chunkCount} chunks, {totalSamples} total samples."
+    );
 }
 catch (PrismException e)
 {

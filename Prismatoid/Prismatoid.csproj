@@ -1,8 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <PackageId>Prismatoid</PackageId>
     <Authors>Prism Contributors</Authors>
     <Description>High-performance cross-platform .NET bindings for the Prism speech library.</Description>
@@ -24,8 +23,11 @@
 
   <Target Name="PrepareNativeAssets" BeforeTargets="BeforeBuild">
     <Message Importance="high" Text="Staging native binaries from GitHub..." />
-    <Exec Command="dotnet run PrepareNative.cs" WorkingDirectory="../scripts"
-      StandardOutputImportance="High" />
+    <Exec
+      Command="dotnet run PrepareNative.cs"
+      WorkingDirectory="../scripts"
+      StandardOutputImportance="High"
+    />
 
     <ItemGroup>
       <Content Include="staging/runtimes/**/*.*">
@@ -36,5 +38,4 @@
       </Content>
     </ItemGroup>
   </Target>
-
 </Project>

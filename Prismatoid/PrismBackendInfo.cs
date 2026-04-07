@@ -7,4 +7,11 @@ namespace Prismatoid;
 /// <param name="Name">The human-readable name of the backend.</param>
 /// <param name="Priority">The backend's priority (higher is more preferred).</param>
 /// <param name="IsSupported">True if the backend is supported on the current platform.</param>
-public readonly record struct PrismBackendInfo(ulong Id, string Name, int Priority, bool IsSupported);
+/// <param name="Features">The features supported by this backend.</param>
+public readonly record struct PrismBackendInfo(
+    ulong Id,
+    string Name,
+    int Priority,
+    bool IsSupported,
+    PrismBackendFeature Features
+);

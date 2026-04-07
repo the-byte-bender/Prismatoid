@@ -1,6 +1,6 @@
-using System.Runtime.InteropServices;
-using System.Collections.Concurrent;
 using System.Buffers;
+using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 using Prismatoid.NativeInterop;
 
 namespace Prismatoid;
@@ -10,6 +10,7 @@ internal sealed unsafe class PrismBackend : IPrismBackend
     private static readonly ConcurrentDictionary<IntPtr, object> _locks = new();
     private readonly NativeInterop.PrismBackend* _handle;
     private readonly object _lock;
+    private readonly PrismBackendFeature _features;
 
     public PrismBackend(NativeInterop.PrismBackend* handle)
     {
@@ -23,6 +24,8 @@ internal sealed unsafe class PrismBackend : IPrismBackend
             {
                 throw new PrismException(err);
             }
+
+            _features = (PrismBackendFeature)Methods.prism_backend_get_features(_handle);
         }
     }
 
@@ -32,10 +35,13 @@ internal sealed unsafe class PrismBackend : IPrismBackend
         {
             lock (_lock)
             {
-                return Marshal.PtrToStringUTF8((IntPtr)Methods.prism_backend_name(_handle)) ?? "Unknown";
+                return Marshal.PtrToStringUTF8((IntPtr)Methods.prism_backend_name(_handle))
+                    ?? "Unknown";
             }
         }
     }
+
+    public PrismBackendFeature Features => _features;
 
     public int Channels
     {
@@ -57,86 +63,70 @@ internal sealed unsafe class PrismBackend : IPrismBackend
             lock (_lock)
             {
                 nuint sampleRate;
-                PrismException.ThrowIfError(Methods.prism_backend_get_sample_rate(_handle, &sampleRate));
+                PrismException.ThrowIfError(
+                    Methods.prism_backend_get_sample_rate(_handle, &sampleRate)
+                );
                 return (int)sampleRate;
             }
         }
     }
 
-    public float? Volume
+    public float Volume
     {
         get
         {
             lock (_lock)
             {
                 float volume;
-                var err = Methods.prism_backend_get_volume(_handle, &volume);
-                if (err is PrismError.PRISM_ERROR_NOT_IMPLEMENTED) return null;
-                PrismException.ThrowIfError(err);
+                PrismException.ThrowIfError(Methods.prism_backend_get_volume(_handle, &volume));
                 return volume;
             }
         }
         set
         {
-            if (value is float v)
+            lock (_lock)
             {
-                lock (_lock)
-                {
-                    var err = Methods.prism_backend_set_volume(_handle, v);
-                    if (err is not PrismError.PRISM_ERROR_NOT_IMPLEMENTED) PrismException.ThrowIfError(err);
-                }
+                PrismException.ThrowIfError(Methods.prism_backend_set_volume(_handle, value));
             }
         }
     }
 
-    public float? Rate
+    public float Rate
     {
         get
         {
             lock (_lock)
             {
                 float rate;
-                var err = Methods.prism_backend_get_rate(_handle, &rate);
-                if (err is PrismError.PRISM_ERROR_NOT_IMPLEMENTED) return null;
-                PrismException.ThrowIfError(err);
+                PrismException.ThrowIfError(Methods.prism_backend_get_rate(_handle, &rate));
                 return rate;
             }
         }
         set
         {
-            if (value is float v)
+            lock (_lock)
             {
-                lock (_lock)
-                {
-                    var err = Methods.prism_backend_set_rate(_handle, v);
-                    if (err is not PrismError.PRISM_ERROR_NOT_IMPLEMENTED) PrismException.ThrowIfError(err);
-                }
+                PrismException.ThrowIfError(Methods.prism_backend_set_rate(_handle, value));
             }
         }
     }
 
-    public float? Pitch
+    public float Pitch
     {
         get
         {
             lock (_lock)
             {
                 float pitch;
-                var err = Methods.prism_backend_get_pitch(_handle, &pitch);
-                if (err is PrismError.PRISM_ERROR_NOT_IMPLEMENTED) return null;
-                PrismException.ThrowIfError(err);
+                PrismException.ThrowIfError(Methods.prism_backend_get_pitch(_handle, &pitch));
                 return pitch;
             }
         }
         set
         {
-            if (value is float v)
+            lock (_lock)
             {
-                lock (_lock)
-                {
-                    var err = Methods.prism_backend_set_pitch(_handle, v);
-                    if (err is not PrismError.PRISM_ERROR_NOT_IMPLEMENTED) PrismException.ThrowIfError(err);
-                }
+                PrismException.ThrowIfError(Methods.prism_backend_set_pitch(_handle, value));
             }
         }
     }
@@ -149,7 +139,8 @@ internal sealed unsafe class PrismBackend : IPrismBackend
             {
                 bool speaking;
                 var err = Methods.prism_backend_is_speaking(_handle, &speaking);
-                if (err is PrismError.PRISM_ERROR_NOT_IMPLEMENTED) return false;
+                if (err is PrismError.PRISM_ERROR_NOT_IMPLEMENTED)
+                    return false;
                 PrismException.ThrowIfError(err);
                 return speaking;
             }
@@ -164,12 +155,14 @@ internal sealed unsafe class PrismBackend : IPrismBackend
             lock (_lock)
             {
                 var refreshErr = Methods.prism_backend_refresh_voices(_handle);
-                if (refreshErr is PrismError.PRISM_ERROR_NOT_IMPLEMENTED) return Enumerable.Empty<PrismVoice>();
+                if (refreshErr is PrismError.PRISM_ERROR_NOT_IMPLEMENTED)
+                    return Enumerable.Empty<PrismVoice>();
                 PrismException.ThrowIfError(refreshErr);
 
                 nuint internalCount;
                 var countErr = Methods.prism_backend_count_voices(_handle, &internalCount);
-                if (countErr is PrismError.PRISM_ERROR_NOT_IMPLEMENTED) return Enumerable.Empty<PrismVoice>();
+                if (countErr is PrismError.PRISM_ERROR_NOT_IMPLEMENTED)
+                    return Enumerable.Empty<PrismVoice>();
                 PrismException.ThrowIfError(countErr);
                 count = internalCount;
             }
@@ -195,8 +188,12 @@ internal sealed unsafe class PrismBackend : IPrismBackend
         {
             sbyte* namePtr;
             sbyte* langPtr;
-            PrismException.ThrowIfError(Methods.prism_backend_get_voice_name(_handle, index, &namePtr));
-            PrismException.ThrowIfError(Methods.prism_backend_get_voice_language(_handle, index, &langPtr));
+            PrismException.ThrowIfError(
+                Methods.prism_backend_get_voice_name(_handle, index, &namePtr)
+            );
+            PrismException.ThrowIfError(
+                Methods.prism_backend_get_voice_language(_handle, index, &langPtr)
+            );
             name = Marshal.PtrToStringUTF8((IntPtr)namePtr) ?? "Unknown";
             lang = Marshal.PtrToStringUTF8((IntPtr)langPtr) ?? "Unknown";
         }
@@ -212,7 +209,12 @@ internal sealed unsafe class PrismBackend : IPrismBackend
             {
                 nuint voiceId;
                 var err = Methods.prism_backend_get_voice(_handle, &voiceId);
-                if (err is PrismError.PRISM_ERROR_NO_VOICES or PrismError.PRISM_ERROR_NOT_IMPLEMENTED) return null;
+                if (
+                    err
+                    is PrismError.PRISM_ERROR_NO_VOICES
+                        or PrismError.PRISM_ERROR_NOT_IMPLEMENTED
+                )
+                    return null;
                 PrismException.ThrowIfError(err);
 
                 return GetVoice(voiceId);
@@ -225,7 +227,8 @@ internal sealed unsafe class PrismBackend : IPrismBackend
                 lock (_lock)
                 {
                     var err = Methods.prism_backend_set_voice(_handle, (nuint)voice.Index);
-                    if (err is not PrismError.PRISM_ERROR_NOT_IMPLEMENTED) PrismException.ThrowIfError(err);
+                    if (err is not PrismError.PRISM_ERROR_NOT_IMPLEMENTED)
+                        PrismException.ThrowIfError(err);
                 }
             }
         }
@@ -236,7 +239,9 @@ internal sealed unsafe class PrismBackend : IPrismBackend
         using var utf8 = new Utf8String(text);
         lock (_lock)
         {
-            PrismException.ThrowIfError(Methods.prism_backend_speak(_handle, utf8.Pointer, interrupt));
+            PrismException.ThrowIfError(
+                Methods.prism_backend_speak(_handle, utf8.Pointer, interrupt)
+            );
         }
     }
 
@@ -294,15 +299,27 @@ internal sealed unsafe class PrismBackend : IPrismBackend
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
-    private static void OnAudioAvailable(void* userdata, float* samples, nuint sampleCount, nuint channels, nuint sampleRate)
+    private static void OnAudioAvailable(
+        void* userdata,
+        float* samples,
+        nuint sampleCount,
+        nuint channels,
+        nuint sampleRate
+    )
     {
         var state = (MemorySpeechState)GCHandle.FromIntPtr((IntPtr)userdata).Target!;
-        if (sampleCount == 0) return;
+        if (sampleCount == 0)
+            return;
 
         float[] buffer = ArrayPool<float>.Shared.Rent((int)sampleCount);
         fixed (float* pBuffer = buffer)
         {
-            Buffer.MemoryCopy(samples, pBuffer, (long)buffer.Length * sizeof(float), (long)sampleCount * sizeof(float));
+            Buffer.MemoryCopy(
+                samples,
+                pBuffer,
+                (long)buffer.Length * sizeof(float),
+                (long)sampleCount * sizeof(float)
+            );
         }
 
         try
@@ -335,7 +352,9 @@ internal sealed unsafe class PrismBackend : IPrismBackend
         using var utf8 = new Utf8String(text);
         lock (_lock)
         {
-            PrismException.ThrowIfError(Methods.prism_backend_output(_handle, utf8.Pointer, interrupt));
+            PrismException.ThrowIfError(
+                Methods.prism_backend_output(_handle, utf8.Pointer, interrupt)
+            );
         }
     }
 
