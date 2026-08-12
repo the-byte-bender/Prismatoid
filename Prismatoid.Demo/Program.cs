@@ -1,17 +1,34 @@
 using Prismatoid;
 
-using PrismContext context = new();
+PrismLog.SetHandler((level, source, message) =>
+    Console.WriteLine($"[log:{level}] {source}: {message}")
+);
+PrismLog.SetLevel(PrismLogLevel.Debug);
+PrismLog.Log(PrismLogLevel.Info, "demo", "Logging configured.");
+
+using var context = new PrismContext(
+    availabilityChanged: (id, name, available) =>
+        Console.WriteLine(
+            $"[availability] {name} ({id}) is now {(available ? "available" : "unavailable")}"
+        )
+);
+
+Console.WriteLine(
+    $"Auto power management supported: {PrismContext.IsAutoPowerManagementSupported()}"
+);
 
 Console.WriteLine("Available Backends:");
 foreach (var info in context.AvailableBackends)
 {
     Console.WriteLine(
-        $"[{info.Id:X16}] {info.Name,-15} | Priority: {info.Priority} | Supported: {info.IsSupported}"
+        $"[{info.Id.Value:X16}] {info.Name,-15} | Priority: {info.Priority}"
     );
 }
 
+using var sapi = context.AcquireBackend(PrismBackendId.Sapi);
+Console.WriteLine($"SAPI acquired by constant: {sapi.Name}");
 using var backend = context.AcquireBestBackend();
-Console.WriteLine($"Active Backend: {backend.Name}");
+Console.WriteLine($"Active Backend: {backend.Name} | Available: {backend.Features.HasFlag(PrismBackendFeature.IsSupportedAtRuntime)}");
 
 Console.WriteLine("Supported Features:");
 foreach (PrismBackendFeature feature in Enum.GetValues<PrismBackendFeature>())

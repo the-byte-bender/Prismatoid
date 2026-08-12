@@ -6,11 +6,54 @@ namespace Prismatoid.NativeInterop
     {
         [LibraryImport("prism")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        public static partial PrismConfig prism_config_init();
+
+        [LibraryImport("prism")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
         public static partial PrismContext* prism_init(PrismConfig* cfg);
 
         [LibraryImport("prism")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
         public static partial void prism_shutdown(PrismContext* ctx);
+
+        [LibraryImport("prism")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        public static partial void prism_availability_poll_pause(PrismContext* ctx);
+
+        [LibraryImport("prism")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        public static partial void prism_availability_poll_resume(PrismContext* ctx);
+
+        [LibraryImport("prism")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        [return: MarshalAs(UnmanagedType.U1)]
+        public static partial bool prism_availability_auto_power_supported();
+
+        [LibraryImport("prism")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        public static partial void prism_log(
+            PrismLogLevel level,
+            [NativeTypeName("const char *")] sbyte* source,
+            [NativeTypeName("const char *")] sbyte* message
+        );
+
+        [LibraryImport("prism")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        public static partial void prism_log_flush();
+
+        [LibraryImport("prism")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        public static partial void prism_log_shutdown();
+
+        [LibraryImport("prism")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        public static partial PrismLogHandlerNative prism_set_log_handler(
+            PrismLogHandlerNative handler
+        );
+
+        [LibraryImport("prism")]
+        [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]
+        public static partial PrismLogLevel prism_set_log_level(PrismLogLevel level);
 
         [LibraryImport("prism")]
         [UnmanagedCallConv(CallConvs = [typeof(System.Runtime.CompilerServices.CallConvCdecl)])]

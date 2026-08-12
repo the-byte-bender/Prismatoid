@@ -54,6 +54,19 @@ public interface IPrismBackend : IDisposable
     int SampleRate { get; }
 
     /// <summary>
+    /// Gets the native bit depth of the audio produced by the backend. Common values are
+    /// 8 and 16.
+    /// </summary>
+    /// <remarks>
+    /// This is the backend's native format, not the format delivered to the audio
+    /// callback: samples delivered by <see cref="SpeakToMemory"/> are always 32-bit
+    /// floating-point values in the range [-1.0, 1.0], regardless of the native bit depth.
+    /// This value is informational; applications typically do not need it unless they are
+    /// converting the audio to a specific format for storage or transmission.
+    /// </remarks>
+    int BitDepth { get; }
+
+    /// <summary>
     /// Gets or sets the current active voice.
     /// </summary>
     PrismVoice? CurrentVoice { get; set; }

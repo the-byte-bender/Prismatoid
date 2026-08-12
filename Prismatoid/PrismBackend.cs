@@ -10,7 +10,6 @@ internal sealed unsafe class PrismBackend : IPrismBackend
     private static readonly ConcurrentDictionary<IntPtr, object> _locks = new();
     private readonly NativeInterop.PrismBackend* _handle;
     private readonly object _lock;
-    private readonly PrismBackendFeature _features;
 
     public PrismBackend(NativeInterop.PrismBackend* handle)
     {
@@ -24,8 +23,6 @@ internal sealed unsafe class PrismBackend : IPrismBackend
             {
                 throw new PrismException(err);
             }
-
-            _features = (PrismBackendFeature)Methods.prism_backend_get_features(_handle);
         }
     }
 
@@ -41,7 +38,16 @@ internal sealed unsafe class PrismBackend : IPrismBackend
         }
     }
 
-    public PrismBackendFeature Features => _features;
+    public PrismBackendFeature Features
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return (PrismBackendFeature)Methods.prism_backend_get_features(_handle);
+            }
+        }
+    }
 
     public int Channels
     {
@@ -67,6 +73,19 @@ internal sealed unsafe class PrismBackend : IPrismBackend
                     Methods.prism_backend_get_sample_rate(_handle, &sampleRate)
                 );
                 return (int)sampleRate;
+            }
+        }
+    }
+
+    public int BitDepth
+    {
+        get
+        {
+            lock (_lock)
+            {
+                nuint bitDepth;
+                PrismException.ThrowIfError(Methods.prism_backend_get_bit_depth(_handle, &bitDepth));
+                return (int)bitDepth;
             }
         }
     }

@@ -1,11 +1,10 @@
-// This will download the latest Prism SDK from GitHub releases, extract the native binaries for each supported platform, and stage them so that on the next `dotnet pack` they will be included properly in the NuGet package.
+// This will download a pinned Prism SDK version from GitHub releases, extract the native binaries for each supported platform, and stage them so that on the next `dotnet pack` they will be included properly in the NuGet package.
 
 using System.IO.Compression;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text.Json.Serialization;
 
 const string GithubRepo = "ethindp/prism";
+const string PrismVersion = "v0.17.3";
 const string TargetProject = "Prismatoid";
 
 (string SdkPath, string Rid)[] Rids =
@@ -20,42 +19,37 @@ const string TargetProject = "Prismatoid";
 
 var rootDir = FindProjectRoot(Directory.GetCurrentDirectory());
 var stagingDir = Path.Combine(rootDir, TargetProject, "staging", "runtimes");
+var stagingRoot = Path.Combine(rootDir, TargetProject, "staging");
+var versionFile = Path.Combine(stagingRoot, "version.txt");
 
 Console.WriteLine(
     $"""
     Target: {TargetProject}
     Repo:   {GithubRepo}
+    Pin:    {PrismVersion}
     Output: {stagingDir}
     """
 );
 
-using var http = new HttpClient();
-http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Prism-Stager", "1.0"));
-
-var release =
-    await http.GetFromJsonAsync(
-        $"https://api.github.com/repos/{GithubRepo}/releases/latest",
-        ScriptContext.Default.GitHubRelease
-    ) ?? throw new InvalidOperationException("Could not retrieve latest release info.");
-
-var sdkAsset =
-    release.Assets.FirstOrDefault(a => a.Name.Contains("prism-sdk-") && a.Name.EndsWith(".zip"))
-    ?? throw new FileNotFoundException("Could not find prism-sdk-*.zip in the latest release.");
-
-Console.WriteLine($"Found: {sdkAsset.Name} ({release.TagName})");
-
-var stagingRoot = Path.Combine(rootDir, TargetProject, "staging");
-var versionFile = Path.Combine(stagingRoot, "version.txt");
-
+// Avoid network access entirely when the pinned version is already staged.
 if (
     File.Exists(versionFile)
-    && File.ReadAllText(versionFile).Trim() == release.TagName
+    && File.ReadAllText(versionFile).Trim() == PrismVersion
     && Directory.Exists(stagingDir)
 )
 {
-    Console.WriteLine($"Already up to date ({release.TagName}). Skipping.");
+    Console.WriteLine($"Already up to date ({PrismVersion}). Skipping.");
     return;
 }
+
+var sdkAssetName = $"prism-sdk-{PrismVersion}.zip";
+var sdkAssetUrl =
+    $"https://github.com/{GithubRepo}/releases/download/{PrismVersion}/{sdkAssetName}";
+
+Console.WriteLine($"Fetching: {sdkAssetName}");
+
+using var http = new HttpClient();
+http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("Prism-Stager", "1.0"));
 
 var tempZip = Path.GetTempFileName();
 var extractDir = Path.Combine(Path.GetTempPath(), $"prism-sdk-{Guid.NewGuid()}");
@@ -63,7 +57,7 @@ var extractDir = Path.Combine(Path.GetTempPath(), $"prism-sdk-{Guid.NewGuid()}")
 try
 {
     Console.WriteLine($"Downloading...");
-    using (var stream = await http.GetStreamAsync(sdkAsset.DownloadUrl))
+    using (var stream = await http.GetStreamAsync(sdkAssetUrl))
     using (var fs = File.Create(tempZip))
     {
         await stream.CopyToAsync(fs);
@@ -103,7 +97,7 @@ try
         }
     }
 
-    File.WriteAllText(versionFile, release.TagName);
+    File.WriteAllText(versionFile, PrismVersion);
     Console.WriteLine("Native binaries successfully staged!");
 }
 finally
@@ -122,16 +116,3 @@ static string FindProjectRoot(string startDir)
     return curr?.FullName
         ?? throw new Exception("Could not find project root by looking for Prismatoid.slnx");
 }
-
-record GitHubRelease(
-    [property: JsonPropertyName("tag_name")] string TagName,
-    [property: JsonPropertyName("assets")] GitHubAsset[] Assets
-);
-
-record GitHubAsset(
-    [property: JsonPropertyName("name")] string Name,
-    [property: JsonPropertyName("browser_download_url")] string DownloadUrl
-);
-
-[JsonSerializable(typeof(GitHubRelease))]
-internal partial class ScriptContext : JsonSerializerContext { }
