@@ -87,7 +87,17 @@ try
             Directory.CreateDirectory(destDir);
             foreach (var file in Directory.EnumerateFiles(sourceDir))
             {
-                var targetFile = Path.Combine(destDir, Path.GetFileName(file));
+                var fileName = Path.GetFileName(file);
+
+                // Tolk is a screen-reader compatibility shim that prism bundles for
+                // legacy backends; Prismatoid doesn't need it. Skip it everywhere it
+                // appears (tolk.dll on Windows, libtolk*.dylib on macOS).
+                if (fileName.Contains("tolk", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var targetFile = Path.Combine(destDir, fileName);
                 File.Copy(file, targetFile, true);
             }
         }
